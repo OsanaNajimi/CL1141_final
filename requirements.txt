@@ -1,0 +1,4 @@
+phonemizer
+pypinyin
+epitran
+panphon
