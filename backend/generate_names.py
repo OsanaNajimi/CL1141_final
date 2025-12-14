@@ -5,6 +5,7 @@ import os
 import numpy as np
 from datetime import datetime
 import IPA
+from pypinyin import pinyin, Style
 
 # --- Configuration Constants ---
 WEIGHT_MEANING = 5.0
@@ -53,6 +54,15 @@ class NameGenerator:
         print("NameGenerator: Precomputing character embeddings...")
         self.chars = self.char_df['character'].tolist()
         self.char_embeddings = self.get_embeddings(self.chars)
+        
+        # Precompute bucket totals for age scoring normalization
+        self.bucket_total_counts = {}
+        for b in AGE_BUCKETS:
+            # Note: total male/female columns might have slightly different names or structure if not strict
+            # Assuming 'male 20-' etc exist as in calculate_age_score
+            total = self.char_df[f'male {b}'].sum() + self.char_df[f'female {b}'].sum()
+            self.bucket_total_counts[b] = total if total > 0 else 1.0
+            
         print("NameGenerator: Ready.")
 
     def load_ipa_dict(self, csv_path):
@@ -92,9 +102,15 @@ class NameGenerator:
         birth_date = user_params.get('birth_date', '2000-01-01')
         english_name = user_params.get('english_name', '')
 
+        # Extract dynamic weights
+        factors = user_params.get('weight_factors', {})
+        w_mean = WEIGHT_MEANING * float(factors.get('meaning', 1.0))
+        w_gend = WEIGHT_GENDER * float(factors.get('gender', 1.0))
+        w_age = WEIGHT_AGE * float(factors.get('age', 1.0))
+        w_phone = WEIGHT_PHONE * float(factors.get('phone', 1.0))
+
         # 1. Meaning Score
         desc_embedding = self.model.encode(description, convert_to_tensor=True)
-        # util.cos_sim returns tensor
         cos_scores = util.cos_sim(desc_embedding, self.char_embeddings)[0].cpu().numpy()
         s_meaning = cos_scores
 
@@ -111,27 +127,31 @@ class NameGenerator:
         en_syllables = IPA.get_english_syllables(english_name) if english_name else []
         s_phone1, s_phone2 = self.calculate_phonetic_scores(self.char_df, en_syllables, self.ipa_map)
 
-        # Total Score Calculation (Preserving User Logic)
-        # total_score = (Weights * Components) * s_freq
-        # Note: s_freq is log10 of counts, so it acts as a multiplier based on popularity.
-        
-        total_term = (WEIGHT_MEANING * s_meaning + 
-                      WEIGHT_GENDER * s_gender + 
-                      WEIGHT_AGE * s_age + 
-                      WEIGHT_PHONE * s_phone1 + 
-                      WEIGHT_PHONE * s_phone2)
+        # Total Score Calculation (Using Dynamic Weights)
+        total_term = (w_mean * s_meaning + 
+                      w_gend * s_gender + 
+                      w_age * s_age + 
+                      w_phone * s_phone1 + 
+                      w_phone * s_phone2)
         
         total_score = total_term * s_freq
         
-        # Create a result dataframe
+        # Create a result dataframe with scaled component scores for display if desired
+        # Or keep original scaling? 
+        # Requirement: "back end will multiply the original weights with the user assigned weights"
+        # So the score passed back should probably reflect this new weighting?
+        # Yes, res_df['score'] uses total_score which uses dynamic weights.
+        # But 's_mean' etc used for display were multiplied by constant CONSTANT.
+        # It's cleaner to show the effectively used score component.
+        
         res_df = self.char_df.copy()
         res_df['score'] = total_score
-        res_df['s_mean'] = s_meaning * WEIGHT_MEANING
-        res_df['s_gend'] = s_gender * WEIGHT_GENDER
-        res_df['s_age'] = s_age * WEIGHT_AGE
+        res_df['s_mean'] = s_meaning * w_mean
+        res_df['s_gend'] = s_gender * w_gend
+        res_df['s_age'] = s_age * w_age
         res_df['s_freq'] = s_freq
-        res_df['s_ph1'] = s_phone1 * WEIGHT_PHONE
-        res_df['s_ph2'] = s_phone2 * WEIGHT_PHONE
+        res_df['s_ph1'] = s_phone1 * w_phone
+        res_df['s_ph2'] = s_phone2 * w_phone
         
         return res_df, en_syllables
 
@@ -146,10 +166,14 @@ class NameGenerator:
         # Filter top K
         top_df = df_scored.sort_values(by='score', ascending=False).head(top_k)
         
+        # Extract Temperature Factor
+        temp_factor = float(user_params.get('temperature_factor', 1.0))
+        effective_temp = TEMPERATURE * temp_factor
+        
         # Probabilities for sampling
         scores = top_df['score'].values
-        # Softmax with temperature
-        exp_scores = np.exp(scores / TEMPERATURE)
+        # Softmax with dynamic temperature
+        exp_scores = np.exp(scores / effective_temp)
         probs = exp_scores / np.sum(exp_scores)
         
         cand_chars = top_df['character'].values
@@ -158,108 +182,140 @@ class NameGenerator:
         generated_names_set = set()
         attempts = 0
         
-        while len(generated_results) < num_names and attempts < 1000:
-            attempts += 1
+        # Helper to format char info
+        def format_character_info(row):
+            char_str = str(row['character'])
+            pinyin_list = [item[0] for item in pinyin(char_str, style=Style.TONE)]
+            char_pinyin = pinyin_list[0] if pinyin_list else ""
             
-            # Sample Family Name (Probabilistic or Phonetical)
-            # Pass ipa_map and syllables for phonetic matching if applicable
+            # Gender score
+            try:
+                if 'sex ratio(male/female)' in row:
+                    ratio = float(row['sex ratio(male/female)'])
+                    if ratio > 999: ratio = 1000.0
+                    abs_gender_score = ratio / (ratio + 1.0)
+                else:
+                    abs_gender_score = 0.5
+            except:
+                abs_gender_score = 0.5
+            
+            # Age Range
+            age_range = self.get_dominant_age_range(row)
+            
+            return {
+                "character": char_str,
+                "pinyin": char_pinyin,
+                "meaning": self.meaning_map.get(char_str, ""),
+                "absolute_gender_score": abs_gender_score,
+                "age_range": age_range,
+                "scores": {
+                    "total_score": float(row['score']),
+                    "gender_score": float(row['s_gend']),
+                    "age_score": float(row['s_age']),
+                    "meaning_score": float(row['s_mean']),
+                    # "freq_score": float(row['s_freq']),
+                    # "phone_score": float(row['s_ph1'] + row['s_ph2'])
+                } 
+            }
+
+        # User request: Generate 50 names, return top 10
+        target_gen_count = 50
+        output_count = 10
+        
+        while len(generated_results) < target_gen_count and attempts < 1000:
+            attempts += 1
             fam = self.sample_family_name(self.family_df, en_syllables, self.ipa_map)
             
-            # Sample Given Name (2 chars)
-            # Weighted random choice
+            # Sample Given Name
             given_chars_indices = np.random.choice(len(cand_chars), size=2, p=probs, replace=True)
-            g1 = cand_chars[given_chars_indices[0]]
-            g2 = cand_chars[given_chars_indices[1]]
-            
-            # Get their partial scores
             row1 = top_df.iloc[given_chars_indices[0]]
             row2 = top_df.iloc[given_chars_indices[1]]
             
+            
+            g1 = str(row1['character'])
+            g2 = str(row2['character'])
+            
+            # Constraint: 2 characters in given name should be different
+            if g1 == g2:
+                continue
+
             full_name = fam + g1 + g2
             
             if full_name not in generated_names_set:
                 generated_names_set.add(full_name)
                 
-                name_info = {
-                    "name": full_name,
+                fake_fam_pinyin_list = [item[0] for item in pinyin(fam, style=Style.TONE)]
+                fam_pinyin = fake_fam_pinyin_list[0] if fake_fam_pinyin_list else ""
+                
+                c1_info = format_character_info(row1)
+                c2_info = format_character_info(row2)
+                
+                # Sum scores
+                total_s = c1_info['scores']['total_score'] + c2_info['scores']['total_score']
+                gender_s = c1_info['scores']['gender_score'] + c2_info['scores']['gender_score']
+                age_s = c1_info['scores']['age_score'] + c2_info['scores']['age_score']
+                meaning_s = c1_info['scores']['meaning_score'] + c2_info['scores']['meaning_score']
+                
+                name_entry = {
                     "family_name": fam,
-                    "given_name": g1 + g2,
-                    "total_score": float(row1['score'] + row2['score']), # Simple sum of individual scores
-                    "details": {
-                        "char1": {
-                            "char": g1,
-                            "meaning": float(row1['s_mean']),
-                            "gender": float(row1['s_gend']),
-                            "age": float(row1['s_age']),
-                            "freq": float(row1['s_freq']),
-                            "phone": float(row1['s_ph1'] + row1['s_ph2']) # Sum phone parts
-                        },
-                        "char2": {
-                            "char": g2,
-                            "meaning": float(row2['s_mean']),
-                            "gender": float(row2['s_gend']),
-                            "age": float(row2['s_age']),
-                            "freq": float(row2['s_freq']),
-                            "phone": float(row2['s_ph1'] + row2['s_ph2'])
-                        }
+                    "family_name_pinyin": fam_pinyin,
+                    "character_1": c1_info,
+                    "character_2": c2_info,
+                    "scores": {
+                        "total_score": total_s,
+                        "gender_score": gender_s,
+                        "age_score": age_s,
+                        "meaning_score": meaning_s
                     }
                 }
-                generated_results.append(name_info)
+                generated_results.append(name_entry)
         
-        # Extract top 30 characters
+        # Sort by total score (descending)
+        generated_results.sort(key=lambda x: x['scores']['total_score'], reverse=True)
+        # Return only top 10
+        generated_results = generated_results[:output_count]
+        
+        # Top 30 Characters
         top_characters_list = []
-        # top_df is already sorted by score descending
         top_30_chars = top_df.head(30)
- 
-        user_gender = user_params.get('gender', '男')
-        gender_weight = 1.0 if user_gender == '男' else -1.0
         
         for _, row in top_30_chars.iterrows():
-            # Calculate absolute gender score
-            # s_gend in df is s_gender_raw * WEIGHT_GENDER
-            # s_gender_raw = log10(ratio) * gender_weight
-            # We want absolute_gender_score = log10(ratio) / 3
-            # So abs_score = (s_gend / WEIGHT_GENDER / gender_weight) / 3
-            
-            s_gend_val = float(row['s_gend'])
-            try:
-                raw_gender = s_gend_val / WEIGHT_GENDER
-                # log_ratio * gender_weight = raw_gender
-                # log_ratio = raw_gender / gender_weight
-                log_ratio = raw_gender / gender_weight
-                abs_gender_score = log_ratio / 3.0
-            except:
-                abs_gender_score = 0.0
+            top_characters_list.append(format_character_info(row))
 
-            char_str = str(row['character'])
-            char_info = {
-                "character": char_str,
-                "total_score": float(row['score']),
-                "meaning": self.meaning_map.get(char_str, ""),
-                "absolute_gender_score": abs_gender_score,
-                "details": {
-                    "meaning": float(row['s_mean']),
-                    "gender": float(row['s_gend']),
-                    "age": float(row['s_age']),
-                    "freq": float(row['s_freq']),
-                    "phone": float(row['s_ph1'] + row['s_ph2'])
-                }
-            }
-            top_characters_list.append(char_info)
-        # print(top_characters_list)
-        # print(generated_results)
         return {
             "recommendations": generated_results,
             "top_characters": top_characters_list
         }
+
+    def get_dominant_age_range(self, row):
+        # Calculate appearance / total_in_bucket for each bucket
+        max_val = -1
+        best_bucket = ""
+        
+        for b in AGE_BUCKETS:
+            # Count for this char in this bucket
+            count = float(row.get(f'male {b}', 0)) + float(row.get(f'female {b}', 0))
+            total = self.bucket_total_counts.get(b, 1.0)
+            norm = count / total
+            if norm > max_val:
+                max_val = norm
+                best_bucket = b
+        return best_bucket
 
     # --- Helper Calculation Methods (Preserving Logic) ---
     def calculate_gender_score(self, df, user_gender):
         ratios = df['sex ratio(male/female)'].values.copy()
         ratios[ratios > 999] = 1000.0
         ratios[ratios < 0.001] = 0.001
+        ratios[ratios < 0.001] = 0.001
         scores = np.log10(ratios)
-        weight = 1.0 if user_gender == 'male' else -1.0
+        
+        if user_gender == 'neutral':
+            # Gender score is 3 - abs(original_gender_score)*2
+            # original_gender_score here is the log10(ratio)
+            return 3.0 - np.abs(scores) * 2.0
+        
+        weight = 1.0 if (user_gender == 'male' or user_gender == '男') else -1.0
         return scores * weight
 
     def calculate_age_score(self, df, birth_date):
@@ -281,17 +337,17 @@ class NameGenerator:
         else: user_idx = 5
         
         scores = np.zeros(len(df))
-        bucket_total_counts = {}
-        for b in AGE_BUCKETS:
-            total = df[f'male {b}'].sum() + df[f'female {b}'].sum()
-            bucket_total_counts[b] = total if total > 0 else 1.0
+        # bucket_total_counts precomputed in __init__
+        # for b in AGE_BUCKETS:
+        #     total = df[f'male {b}'].sum() + df[f'female {b}'].sum()
+        #     bucket_total_counts[b] = total if total > 0 else 1.0
 
         for i, bucket in enumerate(AGE_BUCKETS):
             dist = abs(user_idx - i)
             weight = AGE_WEIGHTS[dist] if dist < len(AGE_WEIGHTS) else 0
             
             char_counts = df[f'male {bucket}'] + df[f'female {bucket}']
-            norm_freq = char_counts / bucket_total_counts[bucket]
+            norm_freq = char_counts / self.bucket_total_counts[bucket]
             scores += weight * norm_freq
         return scores
 

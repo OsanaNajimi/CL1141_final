@@ -51,7 +51,7 @@ export default function GeneratePage() {
                     flexDirection: 'column',
                     // justifyContent: 'center' // Align to top is better for long forms
                 }}>
-                    <h2 style={{ marginBottom: '2rem', fontSize: '1.5rem', color: 'white', fontFamily: 'serif' }}>Your Details</h2>
+                    <h2 style={{ marginBottom: '2rem', fontSize: '1.5rem', color: 'white', fontFamily: 'serif' }}>Fill in your details</h2>
                     <InputForm onSubmit={handleGenerate} isLoading={isLoading} />
                 </div>
 
