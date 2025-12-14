@@ -32,8 +32,8 @@ export default function Navbar() {
             color: 'white',
             borderBottom: '1px solid #333'
         }}>
-            <Link href="/" style={{ fontSize: '1.8rem', fontWeight: 'bold', letterSpacing: '0.1em', fontFamily: 'serif' }}>
-                NAMEGEN
+            <Link href="/" style={{ fontSize: '1.5rem', fontWeight: 'bold', letterSpacing: '0.05em', fontFamily: 'serif' }}>
+                Chinese Name Generator
             </Link>
 
             <div style={{ display: 'flex', gap: '2.5rem', fontSize: '0.9rem', fontWeight: 500, letterSpacing: '0.15em' }}>
