@@ -1,6 +1,12 @@
+numpy
 pandas
+requests
 flask
 flask-cors
+torch
 sentence-transformers
-numpy
-
+phonemizer
+pypinyin
+epitran
+panphon
+python-Levenshtein
