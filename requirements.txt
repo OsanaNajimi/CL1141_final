@@ -9,4 +9,5 @@ phonemizer
 pypinyin
 epitran
 panphon
+espeak-ng-python
 python-Levenshtein
