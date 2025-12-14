@@ -1,0 +1,6 @@
+pandas
+flask
+flask-cors
+sentence-transformers
+numpy
+torch

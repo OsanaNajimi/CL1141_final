@@ -3,9 +3,9 @@ import { NextResponse } from 'next/server';
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        // Flask app running in WSL2, accessible via localhost if bound to 0.0.0.0
-        // Use localhost to rely on Windows->WSL port forwarding
-        const flaskUrl = 'http://localhost:5000/api/generate_names';
+        // Use environment variable for backend URL, default to localhost for dev
+        const backendBaseUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+        const flaskUrl = `${backendBaseUrl}/api/generate_names`;
 
         console.log(`Proxying request to ${flaskUrl}`);
 
