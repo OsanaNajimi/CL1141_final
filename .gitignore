@@ -1,3 +1,4 @@
+.gitignore
 /flite
 /__pycache__
 /node_modules
