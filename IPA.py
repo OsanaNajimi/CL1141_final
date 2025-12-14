@@ -1,9 +1,11 @@
 from phonemizer import phonemize
-from pypinyin import lazy_pinyin
+from pypinyin import lazy_pinyin, pinyin, Style
 import epitran
 import panphon.featuretable as ft
 import re
 import symbols
+
+table = ft.FeatureTable()
 
 def add_aspiration(ipa_text):
     """
@@ -149,7 +151,7 @@ def decompose_syllable(syllable_str):
 
     return to_str(onset), to_str(nucleus), to_str(coda)
 
-def compute_part_distance(seg1, seg2, table):
+def compute_part_distance(seg1, seg2):
     """
     Compute distance between two segments.
     If both None: 0
@@ -164,7 +166,6 @@ def compute_part_distance(seg1, seg2, table):
     # Handle 'ɚ' manually
     s1 = 'ə' if seg1 == 'ɚ' else seg1
     s2 = 'ə' if seg2 == 'ɚ' else seg2
-    
     try:
         vec1 = table.word_to_vector_list(s1, numeric=True)[0]
         vec2 = table.word_to_vector_list(s2, numeric=True)[0]
@@ -173,7 +174,7 @@ def compute_part_distance(seg1, seg2, table):
         # Fallback if symbol not found
         return 1.0
 
-def compute_syllable_distance(syl1, syl2, table):
+def compute_syllable_distance(syl1, syl2):
     """
     Compute distance between two IPA syllables by decomposing into C+V+C
     and summing partial distances.
@@ -181,9 +182,9 @@ def compute_syllable_distance(syl1, syl2, table):
     o1, n1, c1 = decompose_syllable(syl1)
     o2, n2, c2 = decompose_syllable(syl2)
     
-    d_onset = compute_part_distance(o1, o2, table)
-    d_nucleus = compute_part_distance(n1, n2, table)
-    d_coda = compute_part_distance(c1, c2, table)
+    d_onset = compute_part_distance(o1, o2)
+    d_nucleus = compute_part_distance(n1, n2)
+    d_coda = compute_part_distance(c1, c2)
     dist = d_onset + d_nucleus + d_coda
     return dist
 
@@ -194,7 +195,6 @@ def compute_name_distance(en_syllables, zh_syllables):
     """
     n = len(en_syllables)
     m = len(zh_syllables)
-    table = ft.FeatureTable()
     dp = [[0.0] * (m + 1) for _ in range(n + 1)]
     
     GAP_COST = 1.0 
@@ -206,7 +206,7 @@ def compute_name_distance(en_syllables, zh_syllables):
         
     for i in range(1, n + 1):
         for j in range(1, m + 1):
-            cost_sub = compute_syllable_distance(en_syllables[i-1], zh_syllables[j-1], table)
+            cost_sub = compute_syllable_distance(en_syllables[i-1], zh_syllables[j-1])
             # print(cost_sub,en_syllables[i],zh_syllables[i])
             dp[i][j] = min(
                 dp[i-1][j] + GAP_COST,      # Deletion of English syllable
@@ -219,7 +219,7 @@ def compute_name_distance(en_syllables, zh_syllables):
     i, j = n, m
     while i > 0 or j > 0:
         if i > 0 and j > 0:
-            cost_sub = compute_syllable_distance(en_syllables[i-1], zh_syllables[j-1], table)
+            cost_sub = compute_syllable_distance(en_syllables[i-1], zh_syllables[j-1])
             # Check if substitution
             # Use small epsilon for float comparison if needed, or just direct comparison
             if abs(dp[i][j] - (dp[i-1][j-1] + cost_sub)) < 1e-9:
@@ -244,21 +244,27 @@ def compute_name_distance(en_syllables, zh_syllables):
             
     return dp[n][m], alignment
 
+def compute_tone_score(word):
+    tone_numbers = [int(p[0][-1]) if p[0][-1].isdigit() else 5 for p in pinyin(word, style=Style.TONE3)]
+    print(tone_numbers)
+    return
+
 if __name__ == '__main__':
-    # english_name = "jeffery"
-    # chinese_name = "傑佛利"
-    english_name = 'joseph'
+    # english_name = "Jason"
+    # chinese_name = "傑森"
+    # compute_tone_score(chinese_name)
+    # en_syls = get_english_syllables(english_name)
+    # print(f"English: {english_name} -> {en_syls}")
+    # zh_syls = get_chinese_syllables(chinese_name)
+    # print(f"Chinese: {chinese_name} -> {zh_syls}")
+    # dist, alignment = compute_name_distance(en_syls, zh_syls)
+    # print(f"Phonetic distance: {dist:.2f}")
+    # exit()
+    english_name = 'robert'
     chinese_names = [
-    "卓文睿", # Zhuó Wén Ruì (Outstanding, literary, astute/wise)
-    "啟明德", # Qǐ Míng Dé (Enlighten, brilliant, virtue)
-    "博雅誠", # Bó Yǎ Chéng (Broad knowledge, elegant, sincere)
-    "育賢霖", # Yù Xián Lín (Nurture, virtuous, timely rain/blessing)
-    "弘道安", # Hóng Dào Ān (Expand the way/truth, peace/stability)
-    "德師翰", # Dé Shī Hàn (Moral, teacher/master, long feather/scholar)
-    "景誠謙", # Jǐng Chéng Qiān (Brightness/respect, sincere, humble)
-    "知禮敬", # Zhī Lǐ Jìng (Know, ceremony/etiquette, respectful)
-    "思博文", # Sī Bó Wén (Think/contemplate, broad knowledge, literature)
-    "喬世華"  # Qiáo Shì Huá (Tall/grand, world/generation, magnificent/splendid)
+    "羅伯特",
+    "羅伯傑",
+    "林百哲",
 ]
 
     en_syls = get_english_syllables(english_name)

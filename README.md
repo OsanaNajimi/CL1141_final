@@ -37,11 +37,23 @@ pip install -r requirements.txt
 
 ## Usage
 
-Run the script directly:
+### 1. English-Chinese Phonetic Distance
+Calculate the phonetic distance between an existing English name and Chinese name.
 
 ```bash
 python IPA.py
 ```
+
+### 2. Chinese Name Generation
+Generate Traditional Chinese names based on an ideal meaning.
+- Uses `sentence-transformers` to find characters with similar meaning.
+- Probabilistically samples family names (common ones more likely) and characters (semantically closer ones more likely).
+
+```bash
+python generate_names.py
+```
+*Note: The first run will download the model (~100MB) and compute character embeddings.*
+
 
 **Example Output:**
 

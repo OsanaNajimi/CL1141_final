@@ -2,3 +2,10 @@ phonemizer
 pypinyin
 epitran
 panphon
+numpy
+python-Levenshtein
+sentence-transformers
+pandas
+torch
+requests
+beautifulsoup4

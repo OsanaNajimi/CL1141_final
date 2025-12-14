@@ -1,2 +1,5 @@
 /flite
 /__pycache__
+/node_modules
+/tools
+/colab
