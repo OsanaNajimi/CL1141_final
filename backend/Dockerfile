@@ -5,6 +5,7 @@ WORKDIR /app
 # Install system dependencies if needed (e.g. for numpy/pandas compilation sometimes)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    espeak-ng \
     && rm -rf /var/lib/apt/lists/*
 
 # Install CPU-only PyTorch first (significantly reduces image size)

@@ -3,11 +3,10 @@ pandas
 requests
 flask
 flask-cors
-torch
+
 sentence-transformers
 phonemizer
 pypinyin
 epitran
 panphon
-espeak-ng-python
 python-Levenshtein
