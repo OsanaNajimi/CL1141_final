@@ -6,13 +6,14 @@ import numpy as np
 from datetime import datetime
 import IPA
 from pypinyin import pinyin, Style
+import re
 
 # --- Configuration Constants ---
 WEIGHT_MEANING = 5.0
 WEIGHT_GENDER = 0.33
 WEIGHT_AGE = 0.2
 WEIGHT_FREQ = 0.5
-WEIGHT_PHONE = 10.0 
+WEIGHT_PHONE = 1.0 
 TEMPERATURE = 5.0 # temperature for generation
 
 AGE_BUCKETS = ['20-', '20~30', '30~40', '40~50', '50~60', '60+']
@@ -23,6 +24,7 @@ class NameGenerator:
                  family_csv_path='family_name.csv', 
                  ipa_csv_path='character_ipa.csv',
                  meaning_csv_path='character_meaning.csv',
+                 tone_csv_path='tone_combo.csv',
                  model_name='sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'):
         
         print("NameGenerator: Loading data...")
@@ -48,6 +50,12 @@ class NameGenerator:
         else:
             self.meaning_map = self.load_meaning_dict(meaning_csv_path)
             
+        if not os.path.exists(tone_csv_path):
+             print(f"Warning: {tone_csv_path} not found. Tone scoring will use default 1.0.")
+             self.tone_combo_map = {}
+        else:
+            self.tone_combo_map = self.load_tone_combo_dict(tone_csv_path)
+
         print("NameGenerator: Loading model...")
         self.model = SentenceTransformer(model_name)
         
@@ -80,6 +88,41 @@ class NameGenerator:
             meaning_map[str(row['Character'])] = str(row['Meaning'])
         return meaning_map
 
+    def load_tone_combo_dict(self, csv_path):
+        df = pd.read_csv(csv_path)
+        # Assuming cols: Family Tone, Given Tone 1, Given Tone 2, Count
+        tone_map = {}
+        for _, row in df.iterrows():
+            try:
+                t1 = int(row['Family Tone'])
+                t2 = int(row['Given Tone 1'])
+                t3 = int(row['Given Tone 2'])
+                count = float(row['Count'])
+                tone_map[(t1, t2, t3)] = count
+            except:
+                continue
+        return tone_map
+
+    def get_tones(self, text):
+        # Return list of integers for tones
+        # Use pypinyin TONE3 -> 'hao3'
+        try:
+            pys = pinyin(text, style=Style.TONE3, neutral_tone_with_5=True)
+            tones = []
+            for item in pys:
+                s = item[0]
+                # extract digit
+                match = re.search(r'(\d)', s)
+                if match:
+                    tones.append(int(match.group(1)))
+                else:
+                    # If using neutral_tone_with_5=True, neutral should have 5.
+                    # But if purely pinyin without tone number, assume 5?
+                    tones.append(5)
+            return tones
+        except:
+            return [5] * len(text)
+            
     def get_embeddings(self, chars, cache_file='marathon_embeddings.npy'):
         if os.path.exists(cache_file):
             # Verify length
@@ -303,6 +346,24 @@ class NameGenerator:
             if full_name not in generated_names_set:
                 generated_names_set.add(full_name)
                 
+                full_name_pinyin = " ".join([item[0] for item in pinyin(full_name, style=Style.TONE)])
+                
+                # Calculate Tone Combo Frequency
+                full_tones = self.get_tones(full_name)
+                # Ensure we have 3 tones for (Family, G1, G2). 
+                # If name length != 3, we might need logic. 
+                # Assume standard 3-char name for now. If 2 chars (1 fam + 1 given), map logic?
+                # CSV is specifically fam, g1, g2. So strictly for 3-char names.
+                # If len(full_tones) == 3: lookup. Else default 1.
+                
+                tone_freq = 1.0
+                if len(full_tones) == 3:
+                    tone_freq = self.tone_combo_map.get(tuple(full_tones), 1.0)
+                
+                # Multiply total score by frequency
+                original_score = float(row1['score'] + row2['score'])
+                final_total_score = original_score * tone_freq
+                
                 fake_fam_pinyin_list = [item[0] for item in pinyin(fam, style=Style.TONE)]
                 fam_pinyin = fake_fam_pinyin_list[0] if fake_fam_pinyin_list else ""
                 
@@ -310,7 +371,7 @@ class NameGenerator:
                 c2_info = format_character_info(row2)
                 
                 # Sum scores
-                total_s = c1_info['scores']['total_score'] + c2_info['scores']['total_score']
+                total_s = final_total_score # Updated to multiplied score
                 gender_s = c1_info['scores']['gender_score'] + c2_info['scores']['gender_score']
                 age_s = c1_info['scores']['age_score'] + c2_info['scores']['age_score']
                 meaning_s = c1_info['scores']['meaning_score'] + c2_info['scores']['meaning_score']
@@ -320,6 +381,7 @@ class NameGenerator:
                     "family_name_pinyin": fam_pinyin,
                     "character_1": c1_info,
                     "character_2": c2_info,
+                    "tone_freq": tone_freq, # Debug info
                     "scores": {
                         "total_score": total_s,
                         "gender_score": gender_s,
