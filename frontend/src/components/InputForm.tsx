@@ -6,6 +6,8 @@ type FormData = {
     gender: string;
     birth_date: string;
     description: string;
+    surname_mode?: string;
+    surname_input?: string;
     // Dynamic factors
     weight_factors: {
         meaning: number;
@@ -38,7 +40,7 @@ export default function InputForm({ onSubmit, isLoading }: { onSubmit: (data: Fo
     const [formState, setFormState] = useState<FormState>({
         english_name: '',
         gender: 'male',
-        birth_date: '2000-01-01',
+        birth_date: '1990-01-01',
         description: '',
         w_meaning: 5,
         w_gender: 5,
@@ -53,14 +55,10 @@ export default function InputForm({ onSubmit, isLoading }: { onSubmit: (data: Fo
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value, type } = e.target;
 
-        if (name === 'english_name') {
+        if (name === 'english_name' || name === 'surname_input') {
             // Validate: check if value contains only English letters and spaces
             const isValid = /^[A-Za-z\s]*$/.test(value);
             if (!isValid) {
-                // Don't update state or show error? Requirement says "only English alphabets are allowed"
-                // Usually preventing input is better UX if "only allowed"
-                // Or showing error. Let's prevent input of invalid chars + show error if empty?
-                // Just preventing invalid chars:
                 return;
             }
         }
@@ -102,11 +100,13 @@ export default function InputForm({ onSubmit, isLoading }: { onSubmit: (data: Fo
 
         // Prepare Payload
         // div by 5 logic
-        const payload: FormData = {
+        const payload: any = { // Relaxed type for new fields
             english_name: formState.english_name,
             gender: formState.gender,
             birth_date: formState.birth_date,
             description: formState.description,
+            surname_mode: (formState as any).surname_mode || 'random',
+            surname_input: (formState as any).surname_input || '',
             weight_factors: {
                 meaning: formState.w_meaning / 5.0,
                 gender: formState.w_gender / 5.0,
@@ -188,6 +188,39 @@ export default function InputForm({ onSubmit, isLoading }: { onSubmit: (data: Fo
                     <option value="neutral">Neutral</option>
                 </select>
             </div>
+
+            {/* Surname Options */}
+            <div style={{ marginBottom: '1rem' }}>
+                <label style={labelStyle}>Family Name Mode</label>
+                <select
+                    name="surname_mode"
+                    style={inputStyle}
+                    value={(formState as any).surname_mode || 'none'}
+                    onChange={(e) => setFormState(prev => ({ ...prev, surname_mode: e.target.value }))}
+                >
+                    <option value="none">None</option>
+                    <option value="fixed">Specify Chinese Surname</option>
+                    <option value="phonetic">Match English Surname (Phonetic)</option>
+                    <option value="random">Random</option>
+                </select>
+            </div>
+
+            {/* Conditional Surname Input */}
+            {((formState as any).surname_mode === 'fixed' || (formState as any).surname_mode === 'phonetic') && (
+                <div style={{ marginBottom: '1rem' }}>
+                    <label style={labelStyle}>
+                        {(formState as any).surname_mode === 'fixed' ? 'Chinese Surname' : 'English Surname'}
+                    </label>
+                    <input
+                        name="surname_input"
+                        type="text"
+                        style={inputStyle}
+                        value={(formState as any).surname_input || ''}
+                        onChange={(e) => setFormState(prev => ({ ...prev, surname_input: e.target.value }))}
+                        placeholder={(formState as any).surname_mode === 'fixed' ? 'e.g. 李' : 'e.g. Martin'}
+                    />
+                </div>
+            )}
 
             <div style={{ marginBottom: '1rem' }}>
                 <label style={labelStyle}>Date of Birth</label>

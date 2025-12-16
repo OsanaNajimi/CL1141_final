@@ -10,7 +10,8 @@ from pypinyin import pinyin, Style
 # --- Configuration Constants ---
 WEIGHT_MEANING = 5.0
 WEIGHT_GENDER = 0.33
-WEIGHT_AGE = 0.33
+WEIGHT_AGE = 0.2
+WEIGHT_FREQ = 0.5
 WEIGHT_PHONE = 10.0 
 TEMPERATURE = 5.0 # temperature for generation
 
@@ -107,6 +108,7 @@ class NameGenerator:
         w_mean = WEIGHT_MEANING * float(factors.get('meaning', 1.0))
         w_gend = WEIGHT_GENDER * float(factors.get('gender', 1.0))
         w_age = WEIGHT_AGE * float(factors.get('age', 1.0))
+        w_freq = WEIGHT_FREQ * float(factors.get('frequency', 1.0)) # Add frequency weight
         w_phone = WEIGHT_PHONE * float(factors.get('phone', 1.0))
 
         # 1. Meaning Score
@@ -127,15 +129,15 @@ class NameGenerator:
         en_syllables = IPA.get_english_syllables(english_name) if english_name else []
         s_phone1, s_phone2 = self.calculate_phonetic_scores(self.char_df, en_syllables, self.ipa_map)
 
-        # Total Score Calculation (Using Dynamic Weights)
-        total_term = (w_mean * s_meaning + 
+        # Total Score Calculation (Redefined as Sum of All Weighted Scores)
+        total_score = (w_mean * s_meaning + 
                       w_gend * s_gender + 
                       w_age * s_age + 
+                      w_freq * s_freq + 
                       w_phone * s_phone1 + 
                       w_phone * s_phone2)
         
-        total_score = total_term * s_freq
-        
+        # total_score = total_term * s_freq # Old multiplicative logic removed
         # Create a result dataframe with scaled component scores for display if desired
         # Or keep original scaling? 
         # Requirement: "back end will multiply the original weights with the user assigned weights"
@@ -144,18 +146,50 @@ class NameGenerator:
         # But 's_mean' etc used for display were multiplied by constant CONSTANT.
         # It's cleaner to show the effectively used score component.
         
+        # Create a result dataframe
         res_df = self.char_df.copy()
         res_df['score'] = total_score
-        res_df['s_mean'] = s_meaning * w_mean
-        res_df['s_gend'] = s_gender * w_gend
-        res_df['s_age'] = s_age * w_age
-        res_df['s_freq'] = s_freq
-        res_df['s_ph1'] = s_phone1 * w_phone
-        res_df['s_ph2'] = s_phone2 * w_phone
         
+        # Store detailed components as requested:
+        # 1. Original scores (raw or before dynamic weighting) - stored as 'raw_...'
+        res_df['raw_meaning'] = s_meaning
+        res_df['raw_gender'] = s_gender
+        res_df['raw_age'] = s_age
+        res_df['raw_freq'] = s_freq
+        res_df['raw_phone1'] = s_phone1
+        res_df['raw_phone2'] = s_phone2
+        
+        # 2. Weights used for this calculation
+        res_df['w_mean'] = w_mean
+        res_df['w_gend'] = w_gend
+        res_df['w_age'] = w_age
+        res_df['w_freq'] = w_freq
+        res_df['w_phone'] = w_phone
+        
+        # 3. Weighted scores (component * weight)
+        res_df['weighted_meaning'] = s_meaning * w_mean
+        res_df['weighted_gender'] = s_gender * w_gend
+        res_df['weighted_age'] = s_age * w_age
+        res_df['weighted_freq'] = s_freq * w_freq
+        res_df['weighted_phone1'] = s_phone1 * w_phone
+        res_df['weighted_phone2'] = s_phone2 * w_phone
+        
+        # 4. Total term (sum of weighted scores) - No longer separate from freq
+        # res_df['total_term'] = total_term 
+        
+        # 5. Total score (sum of all weighted including freq)
+        
+        # Backward compatibility / Display consistency
+        res_df['s_mean'] = res_df['weighted_meaning']
+        res_df['s_gend'] = res_df['weighted_gender']
+        res_df['s_age'] = res_df['weighted_age']
+        res_df['s_freq'] = res_df['weighted_freq']
+        res_df['s_ph1'] = res_df['weighted_phone1']
+        res_df['s_ph2'] = res_df['weighted_phone2']
+        # print(res_df[['character','s_mean','s_gend','s_age','s_freq','s_ph1','s_ph2']][:50])
         return res_df, en_syllables
 
-    def generate_names(self, user_params, top_k=100, num_names=30):
+    def generate_names(self, user_params, top_k=100):
         """
         Generate list of names.
         Input: user_params (dict)
@@ -224,7 +258,32 @@ class NameGenerator:
         
         while len(generated_results) < target_gen_count and attempts < 1000:
             attempts += 1
-            fam = self.sample_family_name(self.family_df, en_syllables, self.ipa_map)
+            # Extract Surname Options
+            surname_mode = user_params.get('surname_mode', 'random')
+            surname_input = user_params.get('surname_input', '')
+            
+            # If phonetic, we might want to do it ONCE if valid, not re-calc every loop.
+            # But the loop is for generating full names. Family name is usually constant for one generation batch?
+            # Existing logic called sample_family_name inside loop, implying each result could have different family name (if random).
+            # If 'fixed' or 'phonetic' or 'none', it should be same for all.
+            # If 'random', it varies.
+            
+            # I'll call it inside. If phonetic, it might be slow to re-calc 50 times?
+            # Optimization: Calc once if deterministic.
+            if attempts == 1:
+                # Pre-calculate deterministic family name
+                if surname_mode in ['fixed', 'none', 'phonetic']:
+                     # For phonetic, if multiple candidates exist we could arguably sample? 
+                     # But current get_family_name implementation picks top 1. 
+                     # So it is deterministic.
+                     self.cached_fam = self.get_family_name(surname_mode, surname_input, self.ipa_map)
+                else:
+                    self.cached_fam = None
+
+            if self.cached_fam is not None:
+                fam = self.cached_fam
+            else:
+                fam = self.get_family_name(surname_mode, surname_input, self.ipa_map)
             
             # Sample Given Name
             given_chars_indices = np.random.choice(len(cand_chars), size=2, p=probs, replace=True)
@@ -354,7 +413,7 @@ class NameGenerator:
     def calculate_frequency_score(self, df):
         total_counts = df['total male'] + df['total female']
         total_counts[total_counts < 1] = 1
-        return np.log10(total_counts)
+        return np.log10(total_counts) + np.ones_like(total_counts)
 
     def calculate_phonetic_scores(self, df, en_syllables, ipa_map):
         num_syllables = len(en_syllables)
@@ -394,15 +453,67 @@ class NameGenerator:
                 
         return np.array(scores1), np.array(scores2)
 
-    def sample_family_name(self, family_df, en_syllables, ipa_map):
-        # Fallback / < 3 syllables logic or always probabilistic?
-        # User Code had:
-        # if en_syllables and ipa_map and False: -> False effectively disabled "smart" family picking
-        # I will keep it effectively disabled or standard probabilistic as per "False" in user code.
-        # But wait, user edited it to `if en_syllables and ipa_map and False:`? 
-        # Actually in Step 702 line 176 it says `if en_syllables and ipa_map and False:`
-        # So the "Smart Family Name" logic matches user preference to be OFF.
+    def get_family_name(self, mode, surname_input, ipa_map):
+        """
+        Determine family name based on mode.
+        modes: 'random', 'fixed', 'none', 'phonetic'
+        """
+        if mode == 'none':
+            return ""
         
+        if mode == 'fixed':
+            return surname_input.strip() if surname_input else ""
+            
+        if mode == 'phonetic':
+            if not surname_input:
+                return self.sample_family_name(self.family_df) # Fallback
+            
+            # Phonetic matching
+            en_syllables = IPA.get_english_syllables(surname_input)
+            if not en_syllables:
+                 return self.sample_family_name(self.family_df)
+                 
+            best_fam = ""
+            best_score = -1.0
+            
+            # Optimization: could cache this loop
+            candidates = []
+            
+            for _, row in self.family_df.iterrows():
+                fam_char = str(row['family name']).strip()
+                if not fam_char: continue
+                
+                # Get IPA (list of 1 syllable usually)
+                # ipa_map stores 'char': 'ipa_string'
+                # We need list of syllables. For single char, it is [ipa_string]
+                fam_ipa = ipa_map.get(fam_char, "")
+                if not fam_ipa: continue
+                
+                zh_syllables = [fam_ipa]
+                
+                # Compute distance (lower is better)
+                # compute_name_distance returns (dist, alignment)
+                dist, _ = IPA.compute_name_distance(en_syllables, zh_syllables)
+                
+                # Convert to score (high is better)
+                # simple inversion or threshold
+                # dist is roughly 0 to N. 
+                score = 10.0 - dist
+                candidates.append((fam_char, score))
+                
+            # Sort by score desc
+            candidates.sort(key=lambda x: x[1], reverse=True)
+            
+            # Pick top 1 or sample? Let's pick best top match to be deterministic-ish
+            if candidates:
+                return candidates[0][0]
+            else:
+                 return self.sample_family_name(self.family_df)
+
+        # Default random
+        return self.sample_family_name(self.family_df)
+
+    def sample_family_name(self, family_df):
         ranks = family_df['rank'].values
         weights = 1.0 / (10.0 + ranks)
         probs = weights / np.sum(weights)
