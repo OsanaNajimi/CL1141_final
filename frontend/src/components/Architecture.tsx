@@ -41,25 +41,25 @@ export default function Architecture() {
                     marginBottom: '3rem'
                 }}>
                     <div style={{ padding: '1.5rem', backgroundColor: '#333', borderRadius: '8px', border: '1px solid #444' }}>
-                        <h4 style={{ color: '#fff', marginBottom: '0.5rem' }}>🤖 Semantic Embedding</h4>
+                        <h4 style={{ color: '#fff', marginBottom: '0.5rem' }}>Semantic Embedding</h4>
                         <p style={{ fontSize: '0.95rem', color: '#ccc' }}>
                             We encode your description using <code>paraphrase-multilingual-MiniLM-L12-v2</code> and calculate the cosine similarity against character meanings to find the best conceptual match.
                         </p>
                     </div>
                     <div style={{ padding: '1.5rem', backgroundColor: '#333', borderRadius: '8px', border: '1px solid #444' }}>
-                        <h4 style={{ color: '#fff', marginBottom: '0.5rem' }}>🔤 Phonetic Distance</h4>
+                        <h4 style={{ color: '#fff', marginBottom: '0.5rem' }}>Phonetic Distance</h4>
                         <p style={{ fontSize: '0.95rem', color: '#ccc' }}>
                             Your English name is converted to IPA and syllabified. We calculate the <strong>Manhattan distance</strong> on a 24-dimensional feature space (via <code>panphon</code>) to compare with Chinese characters.
                         </p>
                     </div>
                     <div style={{ padding: '1.5rem', backgroundColor: '#333', borderRadius: '8px', border: '1px solid #444' }}>
-                        <h4 style={{ color: '#fff', marginBottom: '0.5rem' }}>📉 Real-World Demographics</h4>
+                        <h4 style={{ color: '#fff', marginBottom: '0.5rem' }}>Real-World Demographics</h4>
                         <p style={{ fontSize: '0.95rem', color: '#ccc' }}>
                             We calculate gender and age scores based on statistical frequency analysis of real-world name data, ensuring your name fits your desired profile.
                         </p>
                     </div>
                     <div style={{ padding: '1.5rem', backgroundColor: '#333', borderRadius: '8px', border: '1px solid #444' }}>
-                        <h4 style={{ color: '#fff', marginBottom: '0.5rem' }}>🎚️ Dynamic Weighting</h4>
+                        <h4 style={{ color: '#fff', marginBottom: '0.5rem' }}>Dynamic Weighting</h4>
                         <p style={{ fontSize: '0.95rem', color: '#ccc' }}>
                             All individual scores are combined using the custom weights you set in the Advanced Options, giving you full control over the prioritization.
                         </p>

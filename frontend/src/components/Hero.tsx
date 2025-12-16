@@ -25,11 +25,11 @@ export default function Hero() {
             </p> */}
 
             <h1 style={{
-                fontSize: '6rem',
+                fontSize: 'clamp(3rem, 10vw, 6rem)',
                 fontFamily: 'serif',
                 fontWeight: 'bold',
                 lineHeight: 1.1,
-                marginTop: '2rem',
+                marginTop: '10vh', // Adjust for sticky nav
                 marginBottom: '2rem'
             }}>
                 Find Your<br />Chinese Name

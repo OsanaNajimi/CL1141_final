@@ -21,22 +21,24 @@ export default function Navbar() {
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            padding: '2rem 3rem',
-            backgroundColor: 'rgba(17, 17, 17, 1)', // Slight transparency
+            padding: '1rem 2rem', // Reduced padding slightly
+            backgroundColor: 'rgba(17, 17, 17, 1)',
             backdropFilter: 'blur(5px)',
-            position: 'fixed', // Sticky behavior
+            position: 'fixed',
             top: 0,
             left: 0,
             right: 0,
             zIndex: 100,
             color: 'white',
-            borderBottom: '1px solid #333'
+            borderBottom: '1px solid #333',
+            flexWrap: 'wrap', // Allow wrapping
+            gap: '1rem' // Gap when wrapped
         }}>
             <Link href="/" style={{ fontSize: '1.5rem', fontWeight: 'bold', letterSpacing: '0.05em', fontFamily: 'serif' }}>
                 Chinese Name Generator
             </Link>
 
-            <div style={{ display: 'flex', gap: '2.5rem', fontSize: '0.9rem', fontWeight: 500, letterSpacing: '0.15em' }}>
+            <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.9rem', fontWeight: 500, letterSpacing: '0.15em', flexWrap: 'wrap' }}>
                 {isGeneratePage ? (
                     <Link
                         href="/"

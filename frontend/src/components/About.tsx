@@ -37,7 +37,7 @@ export default function About() {
 
                 <div style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(2, 1fr)',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
                     gap: '2rem',
                     marginBottom: '3rem',
                     textAlign: 'left'
@@ -50,7 +50,7 @@ export default function About() {
                         border: '1px solid #444',
                         boxShadow: '0 4px 6px rgba(0,0,0,0.3)'
                     }}>
-                        <h3 style={{ marginBottom: '0.5rem', color: '#fff', fontSize: '1.3rem' }}>✨ Meaning</h3>
+                        <h3 style={{ marginBottom: '0.5rem', color: '#fff', fontSize: '1.3rem' }}>Meaning</h3>
                         <p style={{ fontSize: '1rem', color: '#ccc' }}>
                             AI-powered semantic analysis matches your personality description with the deep meanings of thousands of Chinese characters.
                         </p>
@@ -64,7 +64,7 @@ export default function About() {
                         border: '1px solid #444',
                         boxShadow: '0 4px 6px rgba(0,0,0,0.3)'
                     }}>
-                        <h3 style={{ marginBottom: '0.5rem', color: '#fff', fontSize: '1.3rem' }}>🗣️ Sound</h3>
+                        <h3 style={{ marginBottom: '0.5rem', color: '#fff', fontSize: '1.3rem' }}>Sound</h3>
                         <p style={{ fontSize: '1rem', color: '#ccc' }}>
                             Advanced phonetic algorithms analyze your English name to find Chinese characters that echo its original melody.
                         </p>
@@ -78,7 +78,7 @@ export default function About() {
                         border: '1px solid #444',
                         boxShadow: '0 4px 6px rgba(0,0,0,0.3)'
                     }}>
-                        <h3 style={{ marginBottom: '0.5rem', color: '#fff', fontSize: '1.3rem' }}>📊 Demographics</h3>
+                        <h3 style={{ marginBottom: '0.5rem', color: '#fff', fontSize: '1.3rem' }}>Demographics</h3>
                         <p style={{ fontSize: '1rem', color: '#ccc' }}>
                             Gender and age-based scoring techniques ensure your generated name feels natural, appropriate, and authentic.
                         </p>
@@ -92,7 +92,7 @@ export default function About() {
                         border: '1px solid #444',
                         boxShadow: '0 4px 6px rgba(0,0,0,0.3)'
                     }}>
-                        <h3 style={{ marginBottom: '0.5rem', color: '#fff', fontSize: '1.3rem' }}>🎵 Tone Flow</h3>
+                        <h3 style={{ marginBottom: '0.5rem', color: '#fff', fontSize: '1.3rem' }}>Tone Flow</h3>
                         <p style={{ fontSize: '1rem', color: '#ccc' }}>
                             We analyze tone combinations to filter out awkward phrasing and ensure your name sounds rhythmic and harmonious.
                         </p>

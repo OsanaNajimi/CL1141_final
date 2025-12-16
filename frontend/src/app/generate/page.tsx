@@ -40,16 +40,16 @@ export default function GeneratePage() {
             <Navbar />
 
             {/* Content Container (Grid or Flex) - adjusted for fixed navbar */}
-            <div style={{ display: 'flex', flex: 1, overflow: 'hidden', paddingTop: '85px' }}>
+            <div className="responsive-stack" style={{ display: 'flex', flex: 1, overflow: 'hidden', paddingTop: '85px' }}>
                 {/* Left Side: Input Form */}
-                <div style={{
+                <div className="responsive-sidebar" style={{
                     width: '400px',
                     padding: '2rem',
                     borderRight: '1px solid #333',
                     backgroundColor: '#111',
                     display: 'flex',
                     flexDirection: 'column',
-                    // justifyContent: 'center' // Align to top is better for long forms
+                    overflowY: 'auto' // Allow form to scroll on small screens if needed
                 }}>
                     <h2 style={{ marginBottom: '2rem', fontSize: '1.5rem', color: 'white', fontFamily: 'serif' }}>Fill in your details</h2>
                     <InputForm onSubmit={handleGenerate} isLoading={isLoading} />

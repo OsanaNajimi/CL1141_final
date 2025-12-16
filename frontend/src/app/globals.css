@@ -40,3 +40,16 @@ h1, h2, h3, h4, h5, h6 {
 button {
     cursor: pointer;
 }
+
+/* Responsive Utilities */
+@media (max-width: 768px) {
+  .responsive-stack {
+    flex-direction: column !important;
+  }
+  .responsive-sidebar {
+    width: 100% !important;
+    border-right: none !important;
+    border-bottom: 1px solid #333 !important;
+    height: auto !important;
+  }
+}
