@@ -28,7 +28,7 @@ export default function About() {
                 textAlign: 'center'
             }}>
                 <p style={{ marginBottom: '2rem' }}>
-                    <strong>"Chinese Name Generator"</strong> is an intelligent system designed to reconstruct your identity in a new language.
+                    <strong>Chinese Name Generator</strong> is an intelligent system designed to reconstruct your identity in a new language.
                     We believe a name should carry the weight of your personality, the melody of your original name, and the cultural depth of the Chinese language.
                 </p>
                 <p style={{ marginBottom: '3rem' }}>
@@ -52,7 +52,7 @@ export default function About() {
                     }}>
                         <h3 style={{ marginBottom: '0.5rem', color: '#fff', fontSize: '1.3rem' }}>Meaning</h3>
                         <p style={{ fontSize: '1rem', color: '#ccc' }}>
-                            AI-powered semantic analysis matches your personality description with the deep meanings of thousands of Chinese characters.
+                            Semantic analysis matches your personality description with the deep meanings of thousands of Chinese characters.
                         </p>
                     </div>
 
