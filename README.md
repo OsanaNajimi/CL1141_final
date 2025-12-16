@@ -1,68 +1,86 @@
-# English-Chinese Name Phonetic Distance
+# Chinese Name Generator
 
-This tool computes the phonetic distance between an English name and a Traditional Chinese name to evaluate transliteration quality.
+A sophisticated full-stack web application that generates meaningful, phonetically accurate, and culturally appropriate Chinese names for non-Chinese speakers.
 
-## Algorithm
+## Features
 
-1.  **English Processing**:
+-   **Semantic Matching**: Uses `paraphrase-multilingual-MiniLM-L12-v2` to match your personal description with Chinese character meanings.
+-   **Phonetic Alignment**: Converts English names to IPA and calculates Manhattan distance to finding sounding-alike characters.
+-   **Demographic Scoring**: Ensures gender and age appropriateness using real-world statistical data.
+-   **Tone Analysis**: Filters for euphonic 3-character tone combinations.
+-   **Advanced Controls**: Fine-tune weights for Meaning, Sound, Gender, Age, and Creativity.
 
-    - **IPA Transcription**: Converts English names to IPA using `phonemizer`, preserving stress.
-    - **Aspiration**: Adds aspiration (`ʰ`) to voiceless stops (`p`, `t`, `k`) at word beginnings or stressed syllables.
-    - **Syllabization**: Segments IPA into Chinese-like syllables (Onset-Nucleus-Coda structure) using a custom greedy tokenizer.
+## Tech Stack
 
-2.  **Chinese Processing**:
+-   **Frontend**: Next.js, React, TypeScript (Dark UI).
+-   **Backend**: Python Flask, Sentence-Transformers, Phonemizer, Pandas.
 
-    - Converts Traditional Chinese characters to Pinyin (`pypinyin`) and then to IPA (`epitran`).
+## Prerequisites
 
-3.  **Distance Computation**:
-    - **Syllable Distance**: Decomposes each syllable into **Onset**, **Nucleus**, and **Coda**.
-      - Calculates the sum of feature edit distances (`panphon`) for corresponding parts.
-      - **Penalty**: If a part is missing in one syllable but present in the other, a penalty of `0.25` is applied. If both are missing, the cost is `0`.
-      - **Special Case**: Maps `/ɚ/` to `/ə/` for feature vector retrieval.
-    - **Word Distance**: Uses **Dynamic Programming** to find the minimum weighted edit distance between the two syllable sequences.
-    - **Alignment**: Performs backtracking to produce the optimal alignment path and individual syllable costs.
+1.  **Python 3.10+**
+2.  **Node.js 18+**
+3.  **espeak-ng** (Required for phonetic analysis)
+    -   *Windows*: [Download Installer](https://github.com/espeak-ng/espeak-ng/releases) or use standard `espeak`.
+    -   *Linux*: `sudo apt-get install espeak-ng`
+    -   *Mac*: `brew install espeak`
 
-## Requirements
+## Running Locally
 
-- Python 3.x
-- **System Dependencies**:
-  - `espeak` (required by `phonemizer`)
-  - C++ Build Tools (required for `panphon`/`epitran` installation on Windows)
+### 1. Backend (Flask)
 
-## Installation
+Navigate to the `backend` directory:
+
+```bash
+cd backend
+```
+
+Create a virtual environment (optional but recommended):
+
+```bash
+python -m venv venv
+# Windows:
+venv\Scripts\activate
+# Mac/Linux:
+source venv/bin/activate
+```
+
+Install dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## Usage
-
-### 1. English-Chinese Phonetic Distance
-Calculate the phonetic distance between an existing English name and Chinese name.
-
-```bash
-python IPA.py
-```
-
-### 2. Chinese Name Generation
-Generate Traditional Chinese names based on an ideal meaning.
-- Uses `sentence-transformers` to find characters with similar meaning.
-- Probabilistically samples family names (common ones more likely) and characters (semantically closer ones more likely).
+Run the API server:
 
 ```bash
 python generate_names.py
 ```
-*Note: The first run will download the model (~100MB) and compute character embeddings.*
+*The server will start on `http://localhost:5000`.*
 
+### 2. Frontend (Next.js)
 
-**Example Output:**
+Open a new terminal and navigate to the `frontend` directory:
 
+```bash
+cd frontend
 ```
-English: alice -> ['æ', 'lɪ', 's']
-Chinese: 愛莉絲 -> ['ai̯', 'li', 'sz̩']
-Phonetic distance: 0.75
-Alignment:
-('æ', 'ai̯') -> 0.67
-('lɪ', 'li') -> 0.08
-('s', 'sz̩') -> 0.00
+
+Install dependencies:
+
+```bash
+npm install
 ```
+
+Run the development server:
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## Deployment
+
+The project is Dockerized for deployment (e.g., on Railway):
+-   `backend/Dockerfile`: CPU-optimized PyTorch build.
+-   `frontend/Dockerfile`: Multi-stage Next.js build.

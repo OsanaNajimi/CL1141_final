@@ -105,7 +105,7 @@ export default function InputForm({ onSubmit, isLoading }: { onSubmit: (data: Fo
             gender: formState.gender,
             birth_date: formState.birth_date,
             description: formState.description,
-            surname_mode: (formState as any).surname_mode || 'random',
+            surname_mode: (formState as any).surname_mode || 'none',
             surname_input: (formState as any).surname_input || '',
             weight_factors: {
                 meaning: formState.w_meaning / 5.0,

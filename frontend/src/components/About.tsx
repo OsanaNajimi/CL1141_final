@@ -28,14 +28,79 @@ export default function About() {
                 textAlign: 'center'
             }}>
                 <p style={{ marginBottom: '2rem' }}>
-                    This project aims to bridge the cultural gap by providing meaningful Chinese names to foreigners.
-                    It is not just about translation, but about understanding the essence of your identity and finding
-                    characters that resonate with who you are.
+                    <strong>"Chinese Name Generator"</strong> is an intelligent system designed to reconstruct your identity in a new language.
+                    We believe a name should carry the weight of your personality, the melody of your original name, and the cultural depth of the Chinese language.
                 </p>
+                <p style={{ marginBottom: '3rem' }}>
+                    Our algorithm considers four key dimensions to craft your unique name:
+                </p>
+
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(2, 1fr)',
+                    gap: '2rem',
+                    marginBottom: '3rem',
+                    textAlign: 'left'
+                }}>
+                    {/* Card 1: Meaning */}
+                    <div style={{
+                        padding: '1.5rem',
+                        backgroundColor: '#333',
+                        borderRadius: '8px',
+                        border: '1px solid #444',
+                        boxShadow: '0 4px 6px rgba(0,0,0,0.3)'
+                    }}>
+                        <h3 style={{ marginBottom: '0.5rem', color: '#fff', fontSize: '1.3rem' }}>✨ Meaning</h3>
+                        <p style={{ fontSize: '1rem', color: '#ccc' }}>
+                            AI-powered semantic analysis matches your personality description with the deep meanings of thousands of Chinese characters.
+                        </p>
+                    </div>
+
+                    {/* Card 2: Sound */}
+                    <div style={{
+                        padding: '1.5rem',
+                        backgroundColor: '#333',
+                        borderRadius: '8px',
+                        border: '1px solid #444',
+                        boxShadow: '0 4px 6px rgba(0,0,0,0.3)'
+                    }}>
+                        <h3 style={{ marginBottom: '0.5rem', color: '#fff', fontSize: '1.3rem' }}>🗣️ Sound</h3>
+                        <p style={{ fontSize: '1rem', color: '#ccc' }}>
+                            Advanced phonetic algorithms analyze your English name to find Chinese characters that echo its original melody.
+                        </p>
+                    </div>
+
+                    {/* Card 3: Demographics */}
+                    <div style={{
+                        padding: '1.5rem',
+                        backgroundColor: '#333',
+                        borderRadius: '8px',
+                        border: '1px solid #444',
+                        boxShadow: '0 4px 6px rgba(0,0,0,0.3)'
+                    }}>
+                        <h3 style={{ marginBottom: '0.5rem', color: '#fff', fontSize: '1.3rem' }}>📊 Demographics</h3>
+                        <p style={{ fontSize: '1rem', color: '#ccc' }}>
+                            Gender and age-based scoring techniques ensure your generated name feels natural, appropriate, and authentic.
+                        </p>
+                    </div>
+
+                    {/* Card 4: Tone */}
+                    <div style={{
+                        padding: '1.5rem',
+                        backgroundColor: '#333',
+                        borderRadius: '8px',
+                        border: '1px solid #444',
+                        boxShadow: '0 4px 6px rgba(0,0,0,0.3)'
+                    }}>
+                        <h3 style={{ marginBottom: '0.5rem', color: '#fff', fontSize: '1.3rem' }}>🎵 Tone Flow</h3>
+                        <p style={{ fontSize: '1rem', color: '#ccc' }}>
+                            We analyze tone combinations to filter out awkward phrasing and ensure your name sounds rhythmic and harmonious.
+                        </p>
+                    </div>
+                </div>
+
                 <p>
-                    Using advanced computational linguistics techniques, we analyze the phonetics, meaning, and cultural
-                    nuances of your English name and personal description to generate names that are both phonetically
-                    accurate and semantically profound.
+                    With advanced controls, you can fine-tune the balance between sound, meaning, and creativity to find a name that truly belongs to you.
                 </p>
             </div>
         </section>

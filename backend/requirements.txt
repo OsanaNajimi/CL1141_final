@@ -3,7 +3,6 @@ pandas
 requests
 flask
 flask-cors
-
 sentence-transformers
 phonemizer
 pypinyin
